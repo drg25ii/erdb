@@ -79,6 +79,7 @@ const POSTER_QUALITY_BADGE_POSITION_OPTIONS: Array<{
 ];
 const TMDB_KEY_STORAGE_KEY = 'erdb_tmdb_key';
 const MDBLIST_KEY_STORAGE_KEY = 'erdb_mdblist_key';
+const SIMKL_CLIENT_ID_STORAGE_KEY = 'erdb_simkl_client_id';
 const EXPORT_CONFIG_VERSION = 1;
 const RATING_PROVIDER_IDS = new Set(RATING_PROVIDER_OPTIONS.map((option) => option.id));
 const isRatingProviderId = (value: string): value is RatingPreference =>
@@ -216,6 +217,7 @@ export default function Home() {
   const [supportedLanguages, setSupportedLanguages] = useState(SUPPORTED_LANGUAGES);
   const [mdblistKey, setMdblistKey] = useState('');
   const [tmdbKey, setTmdbKey] = useState('');
+  const [simklClientId, setSimklClientId] = useState('');
   const [proxyManifestUrl, setProxyManifestUrl] = useState('');
   const [proxyEnabledTypes, setProxyEnabledTypes] = useState<ProxyEnabledTypes>({
     poster: true,
@@ -252,7 +254,8 @@ export default function Home() {
     if (typeof window === 'undefined') return;
     const storedTmdbKey = safeLocalStorageGet(TMDB_KEY_STORAGE_KEY);
     const storedMdblistKey = safeLocalStorageGet(MDBLIST_KEY_STORAGE_KEY);
-    if (!storedTmdbKey && !storedMdblistKey) {
+    const storedSimklClientId = safeLocalStorageGet(SIMKL_CLIENT_ID_STORAGE_KEY);
+    if (!storedTmdbKey && !storedMdblistKey && !storedSimklClientId) {
       return;
     }
     const frameId = window.requestAnimationFrame(() => {
@@ -261,6 +264,9 @@ export default function Home() {
       }
       if (storedMdblistKey) {
         setMdblistKey(storedMdblistKey);
+      }
+      if (storedSimklClientId) {
+        setSimklClientId(storedSimklClientId);
       }
     });
     return () => window.cancelAnimationFrame(frameId);
@@ -281,6 +287,14 @@ export default function Home() {
       safeLocalStorageRemove(MDBLIST_KEY_STORAGE_KEY);
     }
   }, [mdblistKey]);
+
+  useEffect(() => {
+    if (simklClientId) {
+      safeLocalStorageSet(SIMKL_CLIENT_ID_STORAGE_KEY, simklClientId);
+    } else {
+      safeLocalStorageRemove(SIMKL_CLIENT_ID_STORAGE_KEY);
+    }
+  }, [simklClientId]);
 
   const scrollToHash = useCallback((hash: string, behavior: ScrollBehavior = 'smooth') => {
     if (typeof window === 'undefined') return;
@@ -351,17 +365,17 @@ Parameter               | Values                                                
 type (path)             | poster, backdrop, logo                                               | -
 id (path)               | IMDb (tt...), TMDB (tmdb:id / tmdb:movie:id / tmdb:tv:id), Kitsu (kitsu:id), AniList, MAL          | -
 ratings                 | tmdb, mdblist, imdb, tomatoes, tomatoesaudience, letterboxd,         | all
-                        | metacritic, metacriticuser, trakt, rogerebert, myanimelist,          |
-                        | anilist, kitsu (global fallback)                                     |
+                        | metacritic, metacriticuser, trakt, simkl, rogerebert,               |
+                        | myanimelist, anilist, kitsu (global fallback)                       |
 posterRatings           | tmdb, mdblist, imdb, tomatoes, tomatoesaudience, letterboxd,         | all
-                        | metacritic, metacriticuser, trakt, rogerebert, myanimelist,          |
-                        | anilist, kitsu (poster only)                                         |
+                        | metacritic, metacriticuser, trakt, simkl, rogerebert,               |
+                        | myanimelist, anilist, kitsu (poster only)                           |
 backdropRatings         | tmdb, mdblist, imdb, tomatoes, tomatoesaudience, letterboxd,         | all
-                        | metacritic, metacriticuser, trakt, rogerebert, myanimelist,          |
-                        | anilist, kitsu (backdrop only)                                       |
+                        | metacritic, metacriticuser, trakt, simkl, rogerebert,               |
+                        | myanimelist, anilist, kitsu (backdrop only)                         |
 logoRatings             | tmdb, mdblist, imdb, tomatoes, tomatoesaudience, letterboxd,         | all
-                        | metacritic, metacriticuser, trakt, rogerebert, myanimelist,          |
-                        | anilist, kitsu (logo only)                                           |
+                        | metacritic, metacriticuser, trakt, simkl, rogerebert,               |
+                        | myanimelist, anilist, kitsu (logo only)                             |
 lang                    | Any TMDB ISO 639-1 code (en, it, fr, es, de, ja, ko, etc.)            | en
 streamBadges            | auto, on, off (global fallback)                                      | auto
 posterStreamBadges      | auto, on, off (poster only)                                          | auto
@@ -378,6 +392,7 @@ posterRatingsMaxPerSide | Number (1-20)                                         
 backdropRatingsLayout   | center, right, right-vertical                                        | center
 tmdbKey (REQUIRED)      | Your TMDB v3 API Key                                                 | -
 mdblistKey (REQUIRED)   | Your MDBList.com API Key                                             | -
+simklClientId (OPTIONAL)| Your SIMKL client_id for direct SIMKL ratings                        | -
 
 --- INTEGRATION REQUIREMENTS ---
 1. Use ONLY the \"erdbConfig\" field (no modal and no extra settings panels).
@@ -395,7 +410,7 @@ Quality badges style can be set per-type via cfg.posterQualityBadgesStyle / cfg.
 --- URL BUILD ---
 const typeRatingStyle = type === 'poster' ? cfg.posterRatingStyle : type === 'backdrop' ? cfg.backdropRatingStyle : cfg.logoRatingStyle;
 const typeImageText = type === 'backdrop' ? cfg.backdropImageText : cfg.posterImageText;
-\${cfg.baseUrl}/\${type}/\${id}.jpg?tmdbKey=\${cfg.tmdbKey}&mdblistKey=\${cfg.mdblistKey}&ratings=\${cfg.ratings}&posterRatings=\${cfg.posterRatings}&backdropRatings=\${cfg.backdropRatings}&logoRatings=\${cfg.logoRatings}&lang=\${cfg.lang}&streamBadges=\${cfg.streamBadges}&posterStreamBadges=\${cfg.posterStreamBadges}&backdropStreamBadges=\${cfg.backdropStreamBadges}&qualityBadgesSide=\${cfg.qualityBadgesSide}&posterQualityBadgesPosition=\${cfg.posterQualityBadgesPosition}&qualityBadgesStyle=\${cfg.qualityBadgesStyle}&posterQualityBadgesStyle=\${cfg.posterQualityBadgesStyle}&backdropQualityBadgesStyle=\${cfg.backdropQualityBadgesStyle}&ratingStyle=\${typeRatingStyle}&imageText=\${typeImageText}&posterRatingsLayout=\${cfg.posterRatingsLayout}&posterRatingsMaxPerSide=\${cfg.posterRatingsMaxPerSide}&backdropRatingsLayout=\${cfg.backdropRatingsLayout}
+\${cfg.baseUrl}/\${type}/\${id}.jpg?tmdbKey=\${cfg.tmdbKey}&mdblistKey=\${cfg.mdblistKey}&simklClientId=\${cfg.simklClientId}&ratings=\${cfg.ratings}&posterRatings=\${cfg.posterRatings}&backdropRatings=\${cfg.backdropRatings}&logoRatings=\${cfg.logoRatings}&lang=\${cfg.lang}&streamBadges=\${cfg.streamBadges}&posterStreamBadges=\${cfg.posterStreamBadges}&backdropStreamBadges=\${cfg.backdropStreamBadges}&qualityBadgesSide=\${cfg.qualityBadgesSide}&posterQualityBadgesPosition=\${cfg.posterQualityBadgesPosition}&qualityBadgesStyle=\${cfg.qualityBadgesStyle}&posterQualityBadgesStyle=\${cfg.posterQualityBadgesStyle}&backdropQualityBadgesStyle=\${cfg.backdropQualityBadgesStyle}&ratingStyle=\${typeRatingStyle}&imageText=\${typeImageText}&posterRatingsLayout=\${cfg.posterRatingsLayout}&posterRatingsMaxPerSide=\${cfg.posterRatingsMaxPerSide}&backdropRatingsLayout=\${cfg.backdropRatingsLayout}
 
 Omit imageText when type=logo.
 
@@ -454,6 +469,9 @@ Skip any params that are undefined. Keep empty ratings/posterRatings/backdropRat
     if (mdblistKey) {
       query.set('mdblistKey', mdblistKey);
     }
+    if (simklClientId) {
+      query.set('simklClientId', simklClientId);
+    }
     if (tmdbKey) {
       query.set('tmdbKey', tmdbKey);
     }
@@ -499,12 +517,14 @@ Skip any params that are undefined. Keep empty ratings/posterRatings/backdropRat
     logoRatingStyle,
     baseUrl,
     mdblistKey,
+    simklClientId,
     tmdbKey,
   ]);
 
   const configString = useMemo(() => {
     const tmdb = tmdbKey.trim();
     const mdb = mdblistKey.trim();
+    const simkl = simklClientId.trim();
     if (!baseUrl || !tmdb || !mdb) {
       return '';
     }
@@ -514,6 +534,9 @@ Skip any params that are undefined. Keep empty ratings/posterRatings/backdropRat
       tmdbKey: tmdb,
       mdblistKey: mdb,
     };
+    if (simkl) {
+      config.simklClientId = simkl;
+    }
 
     const posterRatingsQuery = stringifyRatingPreferencesAllowEmpty(posterRatingPreferences);
     const backdropRatingsQuery = stringifyRatingPreferencesAllowEmpty(backdropRatingPreferences);
@@ -578,6 +601,7 @@ Skip any params that are undefined. Keep empty ratings/posterRatings/backdropRat
     baseUrl,
     tmdbKey,
     mdblistKey,
+    simklClientId,
     posterRatingPreferences,
     backdropRatingPreferences,
     logoRatingPreferences,
@@ -607,6 +631,7 @@ Skip any params that are undefined. Keep empty ratings/posterRatings/backdropRat
     const manifestUrl = normalizeManifestUrl(proxyManifestUrl);
     const tmdb = tmdbKey.trim();
     const mdb = mdblistKey.trim();
+    const simkl = simklClientId.trim();
     if (!manifestUrl || isBareHttpUrl(manifestUrl) || !tmdb || !mdb) {
       return '';
     }
@@ -616,6 +641,9 @@ Skip any params that are undefined. Keep empty ratings/posterRatings/backdropRat
       tmdbKey: tmdb,
       mdblistKey: mdb,
     };
+    if (simkl) {
+      config.simklClientId = simkl;
+    }
 
     const proxyPosterRatingsQuery = stringifyRatingPreferencesAllowEmpty(posterRatingPreferences);
     const proxyBackdropRatingsQuery = stringifyRatingPreferencesAllowEmpty(backdropRatingPreferences);
@@ -680,6 +708,7 @@ Skip any params that are undefined. Keep empty ratings/posterRatings/backdropRat
     proxyManifestUrl,
     tmdbKey,
     mdblistKey,
+    simklClientId,
     posterRatingPreferences,
     backdropRatingPreferences,
     logoRatingPreferences,
@@ -797,6 +826,7 @@ Skip any params that are undefined. Keep empty ratings/posterRatings/backdropRat
     if (includeKeys) {
       payload.tmdbKey = tmdbKey;
       payload.mdblistKey = mdblistKey;
+      payload.simklClientId = simklClientId;
     }
 
     const filename = includeKeys ? 'erdb-config-with-keys.json' : 'erdb-config.json';
@@ -811,6 +841,9 @@ Skip any params that are undefined. Keep empty ratings/posterRatings/backdropRat
     }
     if (typeof payload.mdblistKey === 'string') {
       setMdblistKey(payload.mdblistKey);
+    }
+    if (typeof payload.simklClientId === 'string') {
+      setSimklClientId(payload.simklClientId);
     }
     if (typeof payload.mediaId === 'string') {
       setMediaId(payload.mediaId);
@@ -1026,13 +1059,14 @@ Skip any params that are undefined. Keep empty ratings/posterRatings/backdropRat
     refs: {
       navRef,
     },
-    state: {
+      state: {
       previewType,
       mediaId,
       lang,
       supportedLanguages,
-      tmdbKey,
-      mdblistKey,
+        tmdbKey,
+        mdblistKey,
+        simklClientId,
       proxyManifestUrl,
       proxyEnabledTypes,
       proxyTranslateMeta,
@@ -1080,8 +1114,9 @@ Skip any params that are undefined. Keep empty ratings/posterRatings/backdropRat
       setPreviewType,
       setMediaId,
       setLang,
-      setTmdbKey,
-      setMdblistKey,
+        setTmdbKey,
+        setMdblistKey,
+        setSimklClientId,
       setPosterRatingsLayout,
       setPosterRatingsMaxPerSide,
       setBackdropRatingsLayout,
